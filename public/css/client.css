@@ -1,0 +1,70 @@
+* {
+    margin: 0;
+    padding: 0;
+}
+
+html, body {
+    height: 100%;
+}
+
+button {
+    padding: 1px 6px;
+}
+
+video {
+    background: #222;
+    margin: 0 0 0 0;
+    width: 320px;
+    height: 240px;
+}
+
+.container {
+    display: flex;
+    height: 100%;
+    flex-direction: column;
+}
+
+.top {
+    margin: 0.5em;
+}
+
+.middle {
+    flex: 1;
+    overflow: auto;
+    margin: 0 0.5em;
+}
+
+.log {
+    overflow: scroll;
+    width: 30em;
+    height: 100%;
+    background-color: #eeeeee;
+    float: left;
+}
+
+.preview {
+    width: auto;
+    height: 100%;
+    float: left;
+}
+
+.local {
+    margin: 0.5em 0.5em;
+    float: left;
+}
+
+.remote {
+    margin: 0.5em 0.5em 0.5em 0;
+    float: left;
+}
+
+.sdp {
+    width: 320px;
+    height: 200px;
+    margin: 0;
+    resize: none;
+}
+
+.bottom {
+    margin: 0.5em;
+}

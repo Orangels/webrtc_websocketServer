@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>员工页面</title>
+    <link href="./css/client.css" rel="stylesheet"/>
+    <script type="text/javascript">
+
+        var username;
+        var agent;
+        var msg;
+        var log;
+
+        window.onload = function () {
+            username = document.getElementById("username");
+            agent = document.getElementById("agent");
+            msg = document.getElementById("msg");
+            log = document.getElementById("log");
+
+            if (window["WebSocket"]) {
+                // 连接服务器
+                conn = new WebSocket("wss://" + document.location.host + "/webrtc");
+
+                conn.onclose = function (evt) {
+                    appendLog("连接已断开.");
+                };
+
+                conn.onmessage = function (e) {
+                    res = JSON.parse(e.data)
+                    if (res.cmd == 'CMD_STAFFER_LOGIN_ACK') {
+                        if (res.error === 0) {
+                            appendLog("登录成功。");
+                            //启动本地音视频
+                            startLocalMedia();
+                        } else {
+                            appendLog("登录失败，error: " + res.error);
+                        }
+                    } else if (res.cmd === 'CMD_SESSION_BEGIN') {
+                        session = new Object;
+                        session.staffer = res.staffer;
+                        session.user = res.user;
+                        session.iceServers = res.iceServers
+                        appendLog("开始为 " + res.user + " 服务");
+                        console.log(session);
+
+                        if (!pc) {
+                            createPeerConnection();
+                            bindTracks();
+                        }
+                        
+                    } else if (res.cmd === 'CMD_SESSION_END') {
+                        if (res.error === 0)
+                            appendLog("会话已结束。");
+                        else
+                            appendLog("会话异常结束，error: " + res.error);
+                        if (pc != null) {
+                            pc.close();
+                            pc = null;
+                            offerdesc = null;
+                            offer.value = "";
+                            answer.value = "";
+                        }
+                    } else if (res.cmd === 'CMD_CHAT') {
+                        appendLog(session.user + " 说：" + res.text);
+                    } else if (res.cmd === 'CMD_WEBRTC') {
+                        //如果收到的SDP是offer
+                        if (res.data.hasOwnProperty('type') && res.data.type === 'offer') {
+                            offer.value = res.data.sdp;
+                            //进行媒体协商
+                            pc.setRemoteDescription(new RTCSessionDescription(res.data));
+                            //创建answer
+                            pc.createAnswer()
+                                .then(getAnswer)
+                                .catch(handleAnswerError);
+                            //如果收到的SDP是answer
+                        } else if (res.data.hasOwnProperty('type') && res.data.type == 'answer') {
+                            answer.value = res.data.sdp;
+                            //进行媒体协商
+                            pc.setRemoteDescription(new RTCSessionDescription(res.data));
+                            //如果收到的是Candidate消息
+                        } else if (res.data.hasOwnProperty('type') && res.data.type === 'candidate') {
+                            var candidate = new RTCIceCandidate({
+                                sdpMLineIndex: res.data.label,
+                                candidate: res.data.candidate
+                            });
+                            //将远端Candidate消息添加到PeerConnection中
+                            pc.addIceCandidate(candidate);
+                        }
+                    }
+                };
+            } else {
+                appendLog("Your browser does not support WebSockets.");
+            }
+        };
+
+        function appendLog(text) {
+            let item = document.createElement("div");
+            item.innerText = text;
+            let doScroll = log.scrollTop > log.scrollHeight - log.clientHeight - 1;
+            log.appendChild(item);
+            if (doScroll) {
+                log.scrollTop = log.scrollHeight - log.clientHeight;
+            }
+        }
+
+        function login() {
+            let req = new Object;
+            req.cmd = "CMD_STAFFER_LOGIN";
+            req.username = username.value;
+            req.password = "123456";
+            req.agent = agent.value;
+            let str = JSON.stringify(req);
+            console.log(str);
+            conn.send(str);
+        }
+
+        function chat() {
+            if (!conn) {
+                return false;
+            }
+            if (!msg.value) {
+                return false;
+            }
+
+            appendLog("我说：" + msg.value);
+
+            let req = new Object;
+            req.cmd = "CMD_CHAT";
+            req.text = msg.value;
+            let str = JSON.stringify(req);
+            console.log(str);
+            conn.send(str);
+            msg.value = "";
+            return false;
+        }
+
+    </script>
+</head>
+
+<body>
+    <div class="container">
+        <div class="top">
+            <label>员工账号</label>
+            <input id="username"></input>
+            <label>类型</label>
+            <select id="agent">
+                <option value="browser">横屏</option>
+                <option value="phone">竖屏</option>
+            </select>
+            <button id="login" onclick="login()">登录</button>
+            <button id="hangup" onclick="hangup()">挂断</button>
+        </div>
+        <div class="middle">
+            <div class="log" id="log"></div>
+            <div class="preview">
+                <div class="local">
+                    <p>Local:</p>
+                    <video id="localvideo" autoplay playsinline muted></video>
+                    <p>Offer SDP:</p>
+                    <textarea class="sdp" id="offer"></textarea>
+                </div>
+                <div class="remote">
+                    <p>Remote:</p>
+                    <video id="remotevideo" autoplay playsinline></video>
+                    <p>Answer SDP:</p>
+                    <textarea class="sdp" id="answer"></textarea>
+                </div>
+            </div>
+        </div>
+        <div class="bottom">
+            <textarea id="msg" cols="70"  rows="6" style="overflow: visible; resize: none"></textarea>
+            <button id="send" style="vertical-align: top;" onclick="chat()">发送</button>
+        </div>
+    </div>
+
+    <!--
+        引用的JavaScript脚本库:
+        socket.io.js:用于连接信令服务器
+        adapter-latest.js:用于浏览器适配Chrome，Firefox...
+        client.js:WebRTC客户端代码
+    -->
+    <script src="js/adapter-latest.js"></script>
+    <script src="js/client.js"></script>
+
+</body>
+
+</html>
