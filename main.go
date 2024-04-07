@@ -13,6 +13,7 @@ import (
 )
 
 var addr = flag.String("addr", ":8989", "http service address")
+var serverType = flag.String("type", "https", "http service type, http or https")
 var certFile = flag.String("cert", "/home/ubuntu/cert/cert.pem", "cert file")
 var keyFile = flag.String("key", "/home/ubuntu/cert/key.pem", "key file")
 
@@ -36,7 +37,12 @@ func main() {
 	})
 
 	slog.Info(fmt.Sprintf("WebRTC Server started, listening on %s...", *addr))
-	err := http.ListenAndServeTLS(*addr, *certFile, *keyFile, nil)
+	var err error
+	if *serverType == "https" {
+		err = http.ListenAndServeTLS(*addr, *certFile, *keyFile, nil)
+	} else {
+		err = http.ListenAndServe(*addr, nil)
+	}
 	if err != nil {
 		slog.Error("ListenAndServeTLS failed!", err)
 	}

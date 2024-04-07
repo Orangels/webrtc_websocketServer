@@ -22,7 +22,7 @@ var pcConfig = {
         'credential': "moonshine"
     }],
     //默认使用relay方式传输数据
-    "iceTransportPolicy": "relay",
+    "iceTransportPolicy": "all",
     "iceCandidatePoolSize": "0"
 };
 
